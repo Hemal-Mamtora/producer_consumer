@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include <stdlib.h> // https://stackoverflow.com/questions/822323/how-to-generate-a-random-int-in-c
 
 #define SIZE 5
-#define PRODUCER_COUNT 4
-#define CONSUMER_COUNT 4
+#define PRODUCER_COUNT 3
+#define CONSUMER_COUNT 3
+#define TOTAL_ITEMS 2
 
-sem_t *mutex, *empty, *full;
+sem_t mutex, empty, full;
 
 // Circular Queue implementation in C
 // https://www.programiz.com/dsa/circular-queue
@@ -34,7 +36,7 @@ void enQueue(int element) {
     if (front == -1) front = 0;
     rear = (rear + 1) % SIZE;
     items[rear] = element;
-    printf("\n Inserted -> %d", element);
+    //printf("\n Inserted -> %d \n", element);
   }
 }
 
@@ -55,7 +57,7 @@ int deQueue() {
     else {
       front = (front + 1) % SIZE;
     }
-    printf("\n Deleted element -> %d \n", element);
+    // printf("\n Deleted element -> %d \n", element);
     return (element);
   }
 }
@@ -105,15 +107,15 @@ int testQeue() {
 }
 
 void initializeSemaphores(){
-  sem_init(mutex, 0, 1);
-  sem_init(empty, 0, SIZE);
-  sem_init(full, 0, 0);
+  sem_init(&mutex, 0, 1);
+  sem_init(&empty, 0, SIZE);
+  sem_init(&full, 0, 0);
 }
 
 void destroySemaphores(){
-  sem_destroy(mutex);
-  sem_destroy(empty);
-  sem_destroy(full);
+  sem_destroy(&mutex);
+  sem_destroy(&empty);
+  sem_destroy(&full);
 }
 
 int testSemaphores(){
@@ -121,7 +123,60 @@ int testSemaphores(){
   destroySemaphores();
 }
 
+// https://www.ibm.com/docs/en/i/7.4?topic=ssw_ibm_i_74/apis/users_14.htm
+// https://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_create.html
+void* producerStartRoutine(void *arg){
+  int resource;
+  for(int i = 0; i < TOTAL_ITEMS; i++){
+    resource = rand() % 100;
+    sem_wait(&empty);
+    sem_wait(&mutex);
+    enQueue(resource);
+    printf("Producer %d inserted item %d in queue.\n", *(int*)arg, resource); // TODO: print Q ?
+    sem_post(&mutex);
+    sem_post(&full);
+  }
+}
+
+void* consumerStartRoutine(void *arg){
+  int resource;
+  for(int i = 0; i < TOTAL_ITEMS; i++){
+    sem_wait(&full);
+    sem_wait(&mutex);
+    resource = deQueue();
+    printf("Consumer %d consumed item %d from queue\n", *(int*)arg, resource); // TODO: print Q ?
+    sem_post(&mutex);
+    sem_post(&empty);
+  }
+}
+
+// https://shivammitra.com/c/producer-consumer-problem-in-c/#
 int main(){
     // testQeue();
     // testSemaphores();
+    pthread_t producerThreads[PRODUCER_COUNT], consumerThreads[CONSUMER_COUNT];
+    initializeSemaphores();
+    int producerIndices[PRODUCER_COUNT];
+    for(int i = 0; i < PRODUCER_COUNT; i++){
+      producerIndices[i] = i;
+      pthread_create(&producerThreads[i], NULL, (void *)producerStartRoutine, (void *)&producerIndices[i]);
+    }
+
+    int consumerIndices[CONSUMER_COUNT];
+    for(int i = 0; i < CONSUMER_COUNT; i++){
+      consumerIndices[i] = i;
+      pthread_create(&consumerThreads[i], NULL, (void *)consumerStartRoutine, (void *)&consumerIndices[i]);
+    }
+
+    for(int i = 0; i < PRODUCER_COUNT; i++) {
+        pthread_join(producerThreads[i], NULL);
+    }
+
+    for(int i = 0; i < CONSUMER_COUNT; i++) {
+        pthread_join(consumerThreads[i], NULL);
+    }
+
+    destroySemaphores();
+
+    return 0;
 }
