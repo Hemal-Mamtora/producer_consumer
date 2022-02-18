@@ -2,11 +2,13 @@
 #include <semaphore.h>
 #include <pthread.h>
 #include <stdlib.h> // https://stackoverflow.com/questions/822323/how-to-generate-a-random-int-in-c
+#include <unistd.h> // https://pubs.opengroup.org/onlinepubs/009696799/functions/sleep.html
+#include <math.h>
 
-#define SIZE 5
-#define PRODUCER_COUNT 3
-#define CONSUMER_COUNT 3
-#define TOTAL_ITEMS 2
+#define SIZE 10
+#define PRODUCER_COUNT 10
+#define CONSUMER_COUNT 10
+#define TOTAL_ITEMS 20
 
 sem_t mutex, empty, full;
 
@@ -127,8 +129,15 @@ int testSemaphores(){
 // https://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_create.html
 void* producerStartRoutine(void *arg){
   int resource;
+  useconds_t sleep_time;
   for(int i = 0; i < TOTAL_ITEMS; i++){
     resource = rand() % 100;
+
+    // TODO: explain in comments, how sleeping implements aging and avoids starvation
+    sleep_time = (useconds_t) pow(2, i % 10);//+ (useconds_t) (rand() % 500);
+    printf("Producer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
+    usleep(sleep_time);
+
     sem_wait(&empty);
     sem_wait(&mutex);
     enQueue(resource);
@@ -140,7 +149,15 @@ void* producerStartRoutine(void *arg){
 
 void* consumerStartRoutine(void *arg){
   int resource;
+  useconds_t sleep_time;
+
   for(int i = 0; i < TOTAL_ITEMS; i++){
+
+    // TODO: explain in comments, how sleeping implements aging and avoids starvation
+    sleep_time = (useconds_t) pow(2, i % 10); // + (useconds_t) (rand() % 500);
+    printf("Consumer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
+    usleep(sleep_time);
+
     sem_wait(&full);
     sem_wait(&mutex);
     resource = deQueue();
@@ -156,6 +173,7 @@ int main(){
     // testSemaphores();
     pthread_t producerThreads[PRODUCER_COUNT], consumerThreads[CONSUMER_COUNT];
     initializeSemaphores();
+
     int producerIndices[PRODUCER_COUNT];
     for(int i = 0; i < PRODUCER_COUNT; i++){
       producerIndices[i] = i;
