@@ -11,7 +11,8 @@
 #define CONSUMER_COUNT 10
 #define TOTAL_requestQ 20
 
-sem_t mutex, empty, full;
+sem_t requestMutex, requestEmpty, requestFull;
+sem_t responseMutex, responseEmpty, responseFull;
 
 typedef struct Request{
   time_t time;
@@ -90,7 +91,102 @@ void requestQDisplay() {
   }
 }
 
-int testQeue() {
+
+Response responseQ[SIZE];
+int responseQFront = -1;
+int responseQRear = -1;
+
+// Check if the queue is full
+int responseQIsFull() {
+  if ((responseQFront == responseQRear + 1) || (responseQFront == 0 && responseQRear == SIZE - 1)) return 1;
+  return 0;
+}
+
+// Check if the queue is empty
+int responseQIsEmpty() {
+  if (responseQFront == -1) return 1;
+  return 0;
+}
+
+// Adding an element
+void responseQInsert(int element) {
+  if (responseQIsFull())
+    printf("\n Queue is full!! \n");
+  else {
+    if (responseQFront == -1) responseQFront = 0;
+    responseQRear = (responseQRear + 1) % SIZE;
+    responseQ[responseQRear] = element;
+    //printf("\n Inserted -> %d \n", element);
+  }
+}
+
+// Removing an element
+int responseQDelete() {
+  int element;
+  if (responseQIsEmpty()) {
+    printf("\n Queue is empty !! \n");
+    return (-1);
+  } else {
+    element = responseQ[responseQFront];
+    if (responseQFront == responseQRear) {
+      responseQFront = -1;
+      responseQRear = -1;
+    } 
+    // Q has only one element, so we reset the 
+    // queue after dequeing it. ?
+    else {
+      responseQFront = (responseQFront + 1) % SIZE;
+    }
+    // printf("\n Deleted element -> %d \n", element);
+    return (element);
+  }
+}
+
+// responseQDisplay the queue
+void responseQDisplay() {
+  int i;
+  if (responseQIsEmpty())
+    printf(" \n Empty Queue\n");
+  else {
+    printf("\n responseQFront -> %d ", responseQFront);
+    printf("\n responseQ -> ");
+    for (i = responseQFront; i != responseQRear; i = (i + 1) % SIZE) {
+      printf("%d ", responseQ[i]);
+    }
+    printf("%d ", responseQ[i]);
+    printf("\n responseQRear -> %d \n", responseQRear);
+  }
+}
+
+int testresponseQ() {
+  // Fails because responseQFront = -1
+  responseQDelete();
+
+  responseQInsert(1);
+  responseQInsert(2);
+  responseQInsert(3);
+  responseQInsert(4);
+  responseQInsert(5);
+
+  // Fails to responseQInsert because responseQFront == 0 && responseQRear == SIZE - 1
+  responseQInsert(6);
+
+  responseQDisplay();
+  responseQDelete();
+
+  responseQDisplay();
+
+  responseQInsert(7);
+  responseQDisplay();
+
+  // Fails to responseQInsert because responseQFront == responseQRear + 1
+  responseQInsert(8);
+  responseQDisplay();
+
+  return 0;
+}
+
+int testrequestQ() {
   // Fails because requestQFront = -1
   requestQDelete();
 
@@ -119,15 +215,21 @@ int testQeue() {
 }
 
 void initializeSemaphores(){
-  sem_init(&mutex, 0, 1);
-  sem_init(&empty, 0, SIZE);
-  sem_init(&full, 0, 0);
+  sem_init(&requestMutex, 0, 1);
+  sem_init(&requestEmpty, 0, SIZE);
+  sem_init(&requestFull, 0, 0);
+  sem_init(&responseMutex, 0, 1);
+  sem_init(&responseEmpty, 0, SIZE);
+  sem_init(&responseFull, 0, 0);
 }
 
 void destroySemaphores(){
-  sem_destroy(&mutex);
-  sem_destroy(&empty);
-  sem_destroy(&full);
+  sem_destroy(&requestMutex);
+  sem_destroy(&requestEmpty);
+  sem_destroy(&requestFull);
+  sem_destroy(&responseMutex);
+  sem_destroy(&responseEmpty);
+  sem_destroy(&responseFull);
 }
 
 int testSemaphores(){
@@ -179,7 +281,8 @@ void* consumerStartRoutine(void *arg){
 
 // https://shivammitra.com/c/producer-consumer-problem-in-c/#
 int main(){
-    // testQeue();
+    // testRequestQ();
+    // testResponseQ();
     // testSemaphores();
     pthread_t producerThreads[PRODUCER_COUNT], consumerThreads[CONSUMER_COUNT];
     initializeSemaphores();
