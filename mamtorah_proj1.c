@@ -207,9 +207,7 @@ Request requestQDelete() {
     if (requestQFront == requestQRear) {
       requestQFront = -1;
       requestQRear = -1;
-    } 
-    // Q has only one element, so we reset the 
-    // queue after dequeing it. ?
+    }
     else {
       requestQFront = (requestQFront + 1) % SIZE;
     }
@@ -275,8 +273,6 @@ Response responseQDelete() {
       responseQFront = -1;
       responseQRear = -1;
     } 
-    // Q has only one element, so we reset the 
-    // queue after dequeing it. ?
     else {
       responseQFront = (responseQFront + 1) % SIZE;
     }
@@ -334,7 +330,7 @@ void* producerStartRoutine(void *arg){
   int i = 0;
   while(1){
 
-    // TODO: explain in comments, how sleeping implements aging and avoids starvation
+    // sleep for some time for exponential backoff and avoid starvation
     sleep_time = (useconds_t) pow(2, i % 10); // + (useconds_t) (rand() % 500);
     i += 1;
     // printf("Producer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
@@ -343,7 +339,7 @@ void* producerStartRoutine(void *arg){
     sem_wait(&requestFull); // wait if there are no requests
     sem_wait(&requestMutex);
     request = requestQDelete();
-    printf("Producer %d acknowledged request with timestamp %ld microseconds from request queue\n", *(int*)arg, request.timestamp); // TODO: print Q ?
+    printf("Producer %d acknowledged request with timestamp %ld microseconds from request queue\n", *(int*)arg, request.timestamp);
     sem_post(&requestMutex);
     sem_post(&requestEmpty);
 
@@ -353,7 +349,7 @@ void* producerStartRoutine(void *arg){
     // Hence, as soon as the request arrives to the producer, the producer can serve the request.
     response = (Response){1, (rand() % 100)};// ack, resource
 
-    // TODO: explain in comments, how sleeping implements aging and avoids starvation
+    // sleep for some time for exponential backoff and avoid starvation
     sleep_time = (useconds_t) pow(2, i % 10);//+ (useconds_t) (rand() % 500);
     // printf("Producer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
     usleep(sleep_time);
@@ -384,7 +380,7 @@ void* consumerRequestStartRoutine(void *arg){
     timestamp = tv.tv_sec*(long)1000000+tv.tv_usec;
     request = (Request){timestamp};
 
-    // TODO: explain in comments, how sleeping implements aging and avoids starvation
+    // sleep for some time for exponential backoff and avoid starvation
     sleep_time = (useconds_t) pow(2, i % 10);//+ (useconds_t) (rand() % 500);
     i += 1;
     // printf("Consumer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
@@ -407,7 +403,7 @@ void* consumerResponseStartRoutine(void *arg){
   // Consumer requests for a resource, puts it into requestQ
   while(1){
 
-    // TODO: explain in comments, how sleeping implements aging and avoids starvation
+    // sleep for some time for exponential backoff and avoid starvation
     sleep_time = (useconds_t) pow(2, i % 10); // + (useconds_t) (rand() % 500);
     i += 1;
     // printf("Consumer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
@@ -416,7 +412,7 @@ void* consumerResponseStartRoutine(void *arg){
     sem_wait(&responseFull); // wait if there are no resources/acknowledgements
     sem_wait(&responseMutex);
     response = responseQDelete();
-    printf("Consumer %d consumed item %d from response queue\n", *(int*)arg, response.resource); // TODO: print Q ?
+    printf("Consumer %d consumed item %d from response queue\n", *(int*)arg, response.resource);
     sem_post(&responseMutex);
     sem_post(&responseEmpty);
   }
