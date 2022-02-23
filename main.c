@@ -4,18 +4,18 @@
 #include <stdlib.h> // https://stackoverflow.com/questions/822323/how-to-generate-a-random-int-in-c
 #include <unistd.h> // https://pubs.opengroup.org/onlinepubs/009696799/functions/sleep.html
 #include <math.h>
-#include <time.h> // https://stackoverflow.com/questions/11765301/how-do-i-get-the-unix-timestamp-in-c-as-an-int
+#include <sys/time.h>
 
 #define SIZE 4
-#define PRODUCER_COUNT 4
-#define CONSUMER_COUNT 4
-#define TOTAL_requestQ 8
+#define PRODUCER_COUNT 5
+#define CONSUMER_COUNT 5
+#define TOTAL_requestQ 5
 
 sem_t requestMutex, requestEmpty, requestFull;
 sem_t responseMutex, responseEmpty, responseFull;
 
 typedef struct Request{
-  time_t time;
+  long timestamp;
 }Request;
 
 Request nullRequest = {-1};
@@ -88,9 +88,9 @@ void requestQDisplay() {
     printf("\n requestQFront -> %d ", requestQFront);
     printf("\n requestQ -> ");
     for (i = requestQFront; i != requestQRear; i = (i + 1) % SIZE) {
-      printf("%ld ", requestQ[i].time);
+      printf("%ld ", requestQ[i].timestamp);
     }
-    printf("%ld ", requestQ[i].time);
+    printf("%ld ", requestQ[i].timestamp);
     printf("\n requestQRear -> %d \n", requestQRear);
   }
 }
@@ -203,7 +203,7 @@ void* producerStartRoutine(void *arg){
     sem_wait(&requestFull); // wait if there are no requests
     sem_wait(&requestMutex);
     request = requestQDelete();
-    printf("Producer %d acknowledged request with timestamp %ld from queue\n", *(int*)arg, request.time); // TODO: print Q ?
+    printf("Producer %d acknowledged request with timestamp %ld from queue\n", *(int*)arg, request.timestamp); // TODO: print Q ?
     sem_post(&requestMutex);
     sem_post(&requestEmpty);
 
@@ -227,16 +227,22 @@ void* producerStartRoutine(void *arg){
   }
 }
 
-void* consumerStartRoutine(void *arg){
+void* consumerRequestStartRoutine(void *arg){
   useconds_t sleep_time;
+  struct timeval tv;
+  long timestamp;
   Request request;
-  Response response;
 
   // Consumer requests for a resource, puts it into requestQ
   for(int i = 0; i < TOTAL_requestQ; i++){
 
     // create a new new request
-    request = (Request){time(NULL)};
+    gettimeofday(&tv,NULL);
+
+    // timestamp in microseconds
+    // https://stackoverflow.com/questions/5833094/get-a-timestamp-in-c-in-microseconds
+    timestamp = tv.tv_sec*(long)1000000+tv.tv_usec;
+    request = (Request){timestamp};
 
     // TODO: explain in comments, how sleeping implements aging and avoids starvation
     sleep_time = (useconds_t) pow(2, i % 10);//+ (useconds_t) (rand() % 500);
@@ -246,9 +252,18 @@ void* consumerStartRoutine(void *arg){
     sem_wait(&requestEmpty); // wait till an empty slot becomes available
     sem_wait(&requestMutex); // mutual exclusion
     requestQInsert(request);
-    printf("Consumer %d inserted request with timestamp %ld in queue.\n", *(int*)arg, request.time);
+    printf("Consumer %d inserted request with timestamp %ld in queue.\n", *(int*)arg, request.timestamp);
     sem_post(&requestMutex);
     sem_post(&requestFull); // wake producer that there is some request to be processed. 
+  }
+}
+
+void* consumerResponseStartRoutine(void *arg){
+  useconds_t sleep_time;
+  Response response;
+
+  // Consumer requests for a resource, puts it into requestQ
+  for(int i = 0; i < TOTAL_requestQ; i++){
 
     // TODO: explain in comments, how sleeping implements aging and avoids starvation
     sleep_time = (useconds_t) pow(2, i % 10); // + (useconds_t) (rand() % 500);
@@ -269,19 +284,22 @@ int main(){
     // testSemaphores();
     time_t t = -1;
 
-    pthread_t producerThreads[PRODUCER_COUNT], consumerThreads[CONSUMER_COUNT];
+    pthread_t producerThreads[PRODUCER_COUNT], consumerRequestThreads[CONSUMER_COUNT], consumerResponseThreads[CONSUMER_COUNT];
     initializeSemaphores();
 
-    int producerIndices[PRODUCER_COUNT];
+    int producerThreadIndices[PRODUCER_COUNT];
     for(int i = 0; i < PRODUCER_COUNT; i++){
-      producerIndices[i] = i;
-      pthread_create(&producerThreads[i], NULL, (void *)producerStartRoutine, (void *)&producerIndices[i]);
+      producerThreadIndices[i] = i;
+      pthread_create(&producerThreads[i], NULL, (void *)producerStartRoutine, (void *)&producerThreadIndices[i]);
     }
 
-    int consumerIndices[CONSUMER_COUNT];
+    int consumerRequestThreadIndices[CONSUMER_COUNT];
+    int consumerResponseThreadIndices[CONSUMER_COUNT];
     for(int i = 0; i < CONSUMER_COUNT; i++){
-      consumerIndices[i] = i;
-      pthread_create(&consumerThreads[i], NULL, (void *)consumerStartRoutine, (void *)&consumerIndices[i]);
+      consumerRequestThreadIndices[i] = i;
+      consumerResponseThreadIndices[i] = i;
+      pthread_create(&consumerRequestThreads[i], NULL, (void *)consumerRequestStartRoutine, (void *)&consumerRequestThreadIndices[i]);
+      pthread_create(&consumerResponseThreads[i], NULL, (void *)consumerResponseStartRoutine, (void *)&consumerResponseThreadIndices[i]);
     }
 
     for(int i = 0; i < PRODUCER_COUNT; i++) {
@@ -289,7 +307,8 @@ int main(){
     }
 
     for(int i = 0; i < CONSUMER_COUNT; i++) {
-        pthread_join(consumerThreads[i], NULL);
+        pthread_join(consumerRequestThreads[i], NULL);
+        pthread_join(consumerResponseThreads[i], NULL);
     }
 
     destroySemaphores();
