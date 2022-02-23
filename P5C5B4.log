@@ -6,31 +6,31 @@ Consumer 2 inserted request with timestamp 1645593757064997 microseconds in requ
 Consumer 3 inserted request with timestamp 1645593757065007 microseconds in request queue.
 Producer 1 acknowledged request with timestamp 1645593757064733 microseconds from request queue
 Producer 0 acknowledged request with timestamp 1645593757065032 microseconds from request queue
-*   Consumer 2 inserted request with timestamp 1645593757065618 microseconds in request queue.
-*   Consumer 4 inserted request with timestamp 1645593757065611 microseconds in request queue.
-*   Producer 1 inserted ack and resource 86 in response queue.
-*   Producer 0 inserted ack and resource 77 in response queue.
-*   Consumer 1 consumed item 86 from response queue
-*   Producer 3 acknowledged request with timestamp 1645593757064997 microseconds from request queue
-*   Consumer 0 consumed item 77 from response queue
-*   Producer 4 inserted ack and resource 83 in response queue.
-*   Producer 2 acknowledged request with timestamp 1645593757065007 microseconds from request queue
-*   Consumer 3 inserted request with timestamp 1645593757065623 microseconds in request queue.
-*   Consumer 0 inserted request with timestamp 1645593757065462 microseconds in request queue.
-*   Consumer 1 consumed item 83 from response queue
-*   Producer 1 acknowledged request with timestamp 1645593757065618 microseconds from request queue
-*   Consumer 2 inserted request with timestamp 1645593757065727 microseconds in request queue.
-*   Producer 0 acknowledged request with timestamp 1645593757065611 microseconds from request queue
-*   Consumer 4 inserted request with timestamp 1645593757065741 microseconds in request queue.
-*   Producer 3 inserted ack and resource 15 in response queue.
-*   Producer 4 acknowledged request with timestamp 1645593757065623 microseconds from request queue
-*   Producer 2 inserted ack and resource 93 in response queue.
-*   Consumer 0 inserted request with timestamp 1645593757065863 microseconds in request queue.
-*   Consumer 1 consumed item 15 from response queue
-*   Consumer 2 consumed item 93 from response queue
-*   Producer 1 inserted ack and resource 35 in response queue.
-*   Consumer 3 consumed item 35 from response queue
-*   Producer 0 inserted ack and resource 86 in response queue.
+Consumer 2 inserted request with timestamp 1645593757065618 microseconds in request queue.
+Consumer 4 inserted request with timestamp 1645593757065611 microseconds in request queue.
+Producer 1 inserted ack and resource 86 in response queue.
+Producer 0 inserted ack and resource 77 in response queue.
+Consumer 1 consumed item 86 from response queue
+Producer 3 acknowledged request with timestamp 1645593757064997 microseconds from request queue
+Consumer 0 consumed item 77 from response queue
+Producer 4 inserted ack and resource 83 in response queue.
+Producer 2 acknowledged request with timestamp 1645593757065007 microseconds from request queue
+Consumer 3 inserted request with timestamp 1645593757065623 microseconds in request queue.
+Consumer 0 inserted request with timestamp 1645593757065462 microseconds in request queue.
+Consumer 1 consumed item 83 from response queue
+Producer 1 acknowledged request with timestamp 1645593757065618 microseconds from request queue
+Consumer 2 inserted request with timestamp 1645593757065727 microseconds in request queue.
+Producer 0 acknowledged request with timestamp 1645593757065611 microseconds from request queue
+Consumer 4 inserted request with timestamp 1645593757065741 microseconds in request queue.
+Producer 3 inserted ack and resource 15 in response queue.
+Producer 4 acknowledged request with timestamp 1645593757065623 microseconds from request queue
+Producer 2 inserted ack and resource 93 in response queue.
+Consumer 0 inserted request with timestamp 1645593757065863 microseconds in request queue.
+Consumer 1 consumed item 15 from response queue
+Consumer 2 consumed item 93 from response queue
+Producer 1 inserted ack and resource 35 in response queue.
+Consumer 3 consumed item 35 from response queue
+Producer 0 inserted ack and resource 86 in response queue.
 Consumer 0 consumed item 86 from response queue
 Producer 3 acknowledged request with timestamp 1645593757065462 microseconds from request queue
 Producer 4 inserted ack and resource 92 in response queue.
