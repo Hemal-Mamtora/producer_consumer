@@ -1,3 +1,30 @@
+/*
+* Details:
+*   Author: Hemal Ketan Mamtora
+*   Affiliation: Master of Computer Science @ Texas A&M University
+*   Term: Spring 2022
+*   Course: CSCE 611 Operating Systems
+*   Project 1: Multiple Producer Consumer Problem
+* 
+* Instructions to compile on Texas Cyberrange Machine (Ubuntu 20.04):
+*   Compile:
+*   $ gcc mamtorah_proj1.c -lpthread -lm -o mamtorah_proj1.exe
+*   Run:
+*   $ ./mamtorah_proj1.exe
+*   Stop:
+*   Press ctrl + c (^C), to stop
+* 
+* Modify Parameters:
+*   SIZE: to change the size of the message queues
+*   PRODUCER_COUNT: to change the number of producers
+*   CONSUMER_COUNT: to change the number of consumers
+* 
+* Brief Description of the solution:
+*   
+*
+*
+*
+*/
 #include <stdio.h>
 #include <semaphore.h>
 #include <pthread.h>
@@ -9,7 +36,9 @@
 #define SIZE 4
 #define PRODUCER_COUNT 5
 #define CONSUMER_COUNT 5
-#define TOTAL_requestQ 5
+
+// infinite loop: press ctrl + C to stop
+// https://stackoverflow.com/questions/4800404/how-to-avoid-memory-leak-when-user-press-ctrlc-under-linux
 
 sem_t requestMutex, requestEmpty, requestFull;
 sem_t responseMutex, responseEmpty, responseFull;
@@ -183,27 +212,28 @@ void destroySemaphores(){
 int testSemaphores(){
   initializeSemaphores();
   destroySemaphores();
+  return 0;
 }
 
 // https://www.ibm.com/docs/en/i/7.4?topic=ssw_ibm_i_74/apis/users_14.htm
 // https://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_create.html
 void* producerStartRoutine(void *arg){
-  int resource;
   useconds_t sleep_time;
   Request request;
   Response response;
-
-  for(int i = 0; i < TOTAL_requestQ; i++){
+  int i = 0;
+  while(1){
 
     // TODO: explain in comments, how sleeping implements aging and avoids starvation
     sleep_time = (useconds_t) pow(2, i % 10); // + (useconds_t) (rand() % 500);
+    i += 1;
     printf("Producer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
     usleep(sleep_time);
 
     sem_wait(&requestFull); // wait if there are no requests
     sem_wait(&requestMutex);
     request = requestQDelete();
-    printf("Producer %d acknowledged request with timestamp %ld from queue\n", *(int*)arg, request.timestamp); // TODO: print Q ?
+    printf("Producer %d acknowledged request with timestamp %ld microseconds from queue\n", *(int*)arg, request.timestamp); // TODO: print Q ?
     sem_post(&requestMutex);
     sem_post(&requestEmpty);
 
@@ -232,9 +262,9 @@ void* consumerRequestStartRoutine(void *arg){
   struct timeval tv;
   long timestamp;
   Request request;
-
+  int i = 0;
   // Consumer requests for a resource, puts it into requestQ
-  for(int i = 0; i < TOTAL_requestQ; i++){
+  while(1){
 
     // create a new new request
     gettimeofday(&tv,NULL);
@@ -246,13 +276,14 @@ void* consumerRequestStartRoutine(void *arg){
 
     // TODO: explain in comments, how sleeping implements aging and avoids starvation
     sleep_time = (useconds_t) pow(2, i % 10);//+ (useconds_t) (rand() % 500);
+    i += 1;
     printf("Consumer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
     usleep(sleep_time);
 
     sem_wait(&requestEmpty); // wait till an empty slot becomes available
     sem_wait(&requestMutex); // mutual exclusion
     requestQInsert(request);
-    printf("Consumer %d inserted request with timestamp %ld in queue.\n", *(int*)arg, request.timestamp);
+    printf("Consumer %d inserted request with timestamp %ld microseconds in queue.\n", *(int*)arg, request.timestamp);
     sem_post(&requestMutex);
     sem_post(&requestFull); // wake producer that there is some request to be processed. 
   }
@@ -261,12 +292,14 @@ void* consumerRequestStartRoutine(void *arg){
 void* consumerResponseStartRoutine(void *arg){
   useconds_t sleep_time;
   Response response;
+  int i = 0;
 
   // Consumer requests for a resource, puts it into requestQ
-  for(int i = 0; i < TOTAL_requestQ; i++){
+  while(1){
 
     // TODO: explain in comments, how sleeping implements aging and avoids starvation
     sleep_time = (useconds_t) pow(2, i % 10); // + (useconds_t) (rand() % 500);
+    i += 1;
     printf("Consumer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
     usleep(sleep_time);
 
@@ -282,8 +315,6 @@ void* consumerResponseStartRoutine(void *arg){
 // https://shivammitra.com/c/producer-consumer-problem-in-c/#
 int main(){
     // testSemaphores();
-    time_t t = -1;
-
     pthread_t producerThreads[PRODUCER_COUNT], consumerRequestThreads[CONSUMER_COUNT], consumerResponseThreads[CONSUMER_COUNT];
     initializeSemaphores();
 
