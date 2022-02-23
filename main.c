@@ -6,10 +6,10 @@
 #include <math.h>
 #include <time.h> // https://stackoverflow.com/questions/11765301/how-do-i-get-the-unix-timestamp-in-c-as-an-int
 
-#define SIZE 10
-#define PRODUCER_COUNT 10
-#define CONSUMER_COUNT 10
-#define TOTAL_requestQ 20
+#define SIZE 4
+#define PRODUCER_COUNT 4
+#define CONSUMER_COUNT 4
+#define TOTAL_requestQ 8
 
 sem_t requestMutex, requestEmpty, requestFull;
 sem_t responseMutex, responseEmpty, responseFull;
@@ -18,10 +18,14 @@ typedef struct Request{
   time_t time;
 }Request;
 
+Request nullRequest = {-1};
+
 typedef struct Response{
   int ack; // boolean to store acknowledgement
   int resource;
 }Response;
+
+Response nullResponse = {-1, -1};
 
 // Circular Queue implementation in C
 // https://www.programiz.com/dsa/circular-queue
@@ -42,7 +46,7 @@ int requestQIsEmpty() {
 }
 
 // Adding an element
-void requestQInsert(int element) {
+void requestQInsert(Request element) {
   if (requestQIsFull())
     printf("\n Queue is full!! \n");
   else {
@@ -54,11 +58,11 @@ void requestQInsert(int element) {
 }
 
 // Removing an element
-int requestQDelete() {
-  int element;
+Request requestQDelete() {
+  Request element;
   if (requestQIsEmpty()) {
     printf("\n Queue is empty !! \n");
-    return (-1);
+    return nullRequest;
   } else {
     element = requestQ[requestQFront];
     if (requestQFront == requestQRear) {
@@ -84,9 +88,9 @@ void requestQDisplay() {
     printf("\n requestQFront -> %d ", requestQFront);
     printf("\n requestQ -> ");
     for (i = requestQFront; i != requestQRear; i = (i + 1) % SIZE) {
-      printf("%d ", requestQ[i]);
+      printf("%ld ", requestQ[i].time);
     }
-    printf("%d ", requestQ[i]);
+    printf("%ld ", requestQ[i].time);
     printf("\n requestQRear -> %d \n", requestQRear);
   }
 }
@@ -109,7 +113,7 @@ int responseQIsEmpty() {
 }
 
 // Adding an element
-void responseQInsert(int element) {
+void responseQInsert(Response element) {
   if (responseQIsFull())
     printf("\n Queue is full!! \n");
   else {
@@ -121,11 +125,11 @@ void responseQInsert(int element) {
 }
 
 // Removing an element
-int responseQDelete() {
-  int element;
+Response responseQDelete() {
+  Response element;
   if (responseQIsEmpty()) {
     printf("\n Queue is empty !! \n");
-    return (-1);
+    return nullResponse;
   } else {
     element = responseQ[responseQFront];
     if (responseQFront == responseQRear) {
@@ -151,67 +155,11 @@ void responseQDisplay() {
     printf("\n responseQFront -> %d ", responseQFront);
     printf("\n responseQ -> ");
     for (i = responseQFront; i != responseQRear; i = (i + 1) % SIZE) {
-      printf("%d ", responseQ[i]);
+      printf("%d ", responseQ[i].resource);
     }
-    printf("%d ", responseQ[i]);
+    printf("%d ", responseQ[i].resource);
     printf("\n responseQRear -> %d \n", responseQRear);
   }
-}
-
-int testresponseQ() {
-  // Fails because responseQFront = -1
-  responseQDelete();
-
-  responseQInsert(1);
-  responseQInsert(2);
-  responseQInsert(3);
-  responseQInsert(4);
-  responseQInsert(5);
-
-  // Fails to responseQInsert because responseQFront == 0 && responseQRear == SIZE - 1
-  responseQInsert(6);
-
-  responseQDisplay();
-  responseQDelete();
-
-  responseQDisplay();
-
-  responseQInsert(7);
-  responseQDisplay();
-
-  // Fails to responseQInsert because responseQFront == responseQRear + 1
-  responseQInsert(8);
-  responseQDisplay();
-
-  return 0;
-}
-
-int testrequestQ() {
-  // Fails because requestQFront = -1
-  requestQDelete();
-
-  requestQInsert(1);
-  requestQInsert(2);
-  requestQInsert(3);
-  requestQInsert(4);
-  requestQInsert(5);
-
-  // Fails to requestQInsert because requestQFront == 0 && requestQRear == SIZE - 1
-  requestQInsert(6);
-
-  requestQDisplay();
-  requestQDelete();
-
-  requestQDisplay();
-
-  requestQInsert(7);
-  requestQDisplay();
-
-  // Fails to requestQInsert because requestQFront == requestQRear + 1
-  requestQInsert(8);
-  requestQDisplay();
-
-  return 0;
 }
 
 void initializeSemaphores(){
@@ -242,48 +190,85 @@ int testSemaphores(){
 void* producerStartRoutine(void *arg){
   int resource;
   useconds_t sleep_time;
+  Request request;
+  Response response;
+
   for(int i = 0; i < TOTAL_requestQ; i++){
-    resource = rand() % 100;
+
+    // TODO: explain in comments, how sleeping implements aging and avoids starvation
+    sleep_time = (useconds_t) pow(2, i % 10); // + (useconds_t) (rand() % 500);
+    printf("Producer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
+    usleep(sleep_time);
+
+    sem_wait(&requestFull); // wait if there are no requests
+    sem_wait(&requestMutex);
+    request = requestQDelete();
+    printf("Producer %d acknowledged request with timestamp %ld from queue\n", *(int*)arg, request.time); // TODO: print Q ?
+    sem_post(&requestMutex);
+    sem_post(&requestEmpty);
+
+    // NOTE: I assume that
+    // 1. There are unlimited resources
+    // 2. The access to resource is instantaneous
+    // Hence, as soon as the request arrives to the producer, the producer can serve the request.
+    response = (Response){1, (rand() % 100)};// ack, resource
 
     // TODO: explain in comments, how sleeping implements aging and avoids starvation
     sleep_time = (useconds_t) pow(2, i % 10);//+ (useconds_t) (rand() % 500);
     printf("Producer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
     usleep(sleep_time);
 
-    sem_wait(&empty);
-    sem_wait(&mutex);
-    requestQInsert(resource);
-    printf("Producer %d inserted item %d in queue.\n", *(int*)arg, resource); // TODO: print Q ?
-    sem_post(&mutex);
-    sem_post(&full);
+    sem_wait(&responseEmpty); // wait till empty slots become available
+    sem_wait(&responseMutex);
+    responseQInsert(response);
+    printf("Producer %d inserted ack and resource %d in queue.\n", *(int*)arg, response.resource);
+    sem_post(&responseMutex);
+    sem_post(&responseFull);
   }
 }
 
 void* consumerStartRoutine(void *arg){
-  int resource;
   useconds_t sleep_time;
+  Request request;
+  Response response;
 
+  // Consumer requests for a resource, puts it into requestQ
   for(int i = 0; i < TOTAL_requestQ; i++){
+
+    // create a new new request
+    request = (Request){time(NULL)};
+
+    // TODO: explain in comments, how sleeping implements aging and avoids starvation
+    sleep_time = (useconds_t) pow(2, i % 10);//+ (useconds_t) (rand() % 500);
+    printf("Consumer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
+    usleep(sleep_time);
+
+    sem_wait(&requestEmpty); // wait till an empty slot becomes available
+    sem_wait(&requestMutex); // mutual exclusion
+    requestQInsert(request);
+    printf("Consumer %d inserted request with timestamp %ld in queue.\n", *(int*)arg, request.time);
+    sem_post(&requestMutex);
+    sem_post(&requestFull); // wake producer that there is some request to be processed. 
 
     // TODO: explain in comments, how sleeping implements aging and avoids starvation
     sleep_time = (useconds_t) pow(2, i % 10); // + (useconds_t) (rand() % 500);
     printf("Consumer %d sleeps for %u microseconds\n", *(int*)arg, sleep_time);
     usleep(sleep_time);
 
-    sem_wait(&full);
-    sem_wait(&mutex);
-    resource = requestQDelete();
-    printf("Consumer %d consumed item %d from queue\n", *(int*)arg, resource); // TODO: print Q ?
-    sem_post(&mutex);
-    sem_post(&empty);
+    sem_wait(&responseFull); // wait if there are no resources/acknowledgements
+    sem_wait(&responseMutex);
+    response = responseQDelete();
+    printf("Consumer %d consumed item %d from queue\n", *(int*)arg, response.resource); // TODO: print Q ?
+    sem_post(&responseMutex);
+    sem_post(&responseEmpty);
   }
 }
 
 // https://shivammitra.com/c/producer-consumer-problem-in-c/#
 int main(){
-    // testRequestQ();
-    // testResponseQ();
     // testSemaphores();
+    time_t t = -1;
+
     pthread_t producerThreads[PRODUCER_COUNT], consumerThreads[CONSUMER_COUNT];
     initializeSemaphores();
 
